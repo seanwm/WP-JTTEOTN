@@ -31,7 +31,7 @@ function journey_taxonomies() {
 			'labels' => $labels,
 			'hierarchical' => false,
 		);
-	register_taxonomy( 'journey_city', 'journey_events' $args );
+	register_taxonomy( 'journey_city', 'journey_events', $args );
 }
 
 function create_journey_event_type() {
@@ -55,7 +55,7 @@ function create_journey_event_type() {
  
             'public' => true,
             'menu_position' => 15,
-            'supports' => array( 'title', 'editor', 'comments', 'thumbnail', 'custom-fields' ),
+            'supports' => array( 'title', 'editor', 'comments', 'thumbnail' ),
             'taxonomies' => array( '' ),
             'menu_icon' => plugins_url( 'images/image.png', __FILE__ ),
             'has_archive' => true
