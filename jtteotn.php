@@ -32,9 +32,10 @@ function journey_taxonomies() {
 		);
 		$args = array(
 			'labels' => $labels,
-			'hierarchical' => false,
+			'hierarchical' => true,
+			'show_tagcloud' => false
 		);
-	register_taxonomy( 'journey_city', 'journeys', $args );
+	register_taxonomy( 'cities', 'journeys', $args );
 }
 
 function create_journey_event_type() {
@@ -81,8 +82,17 @@ function display_journey_event_meta_box( $journey_event ) {
 		$custom = get_post_custom($post->ID);
 		
 		wp_nonce_field( plugin_basename( __FILE__ ), 'journey_fields_nonce' );
-		
-		$journey_date = strtotime( get_post_meta( $post->ID, 'journey_date', true ) );
+
+		$journey_subtitle = esc_html(get_post_meta($post->ID, 'journey_subtitle', true ) );		
+
+		if (get_post_meta( $post->ID, 'journey_date', true ) == '' || get_post_meta( $post->ID, 'journey_date', true )==null)
+		{
+			$journey_date = time();
+		}
+		else
+		{
+			$journey_date = strtotime( get_post_meta( $post->ID, 'journey_date', true ) );
+		}
 		
 		$journey_time = esc_html(get_post_meta( $post->ID, 'journey_time', true ) );
 		
@@ -90,7 +100,7 @@ function display_journey_event_meta_box( $journey_event ) {
 		
 		$journey_location_url = esc_html( get_post_meta( $post->ID, 'journey_location_url', true ) );
 		
-		$journey_event_details_url = esc_html( get_post_meta( $post->ID, 'journey_details_url', true ) );
+		$journey_event_details_url = esc_html( get_post_meta( $post->ID, 'journey_event_details_url', true ) );
 		
 		$journey_facebook_url = esc_html( get_post_meta( $post->ID, 'journey_facebook_url', true ) );
 		
@@ -101,11 +111,15 @@ function display_journey_event_meta_box( $journey_event ) {
     ?>
     <table>
         <tr>
+            <td style="width: 100%">Subtitle (e.g. "Part of Come Out & Play SF 2012")</td>
+            <td><input type="text" size="80" name="journey_subtitle_f" value="<?php echo $journey_subtitle; ?>" /></td>
+        </tr>
+        <tr>
             <td style="width: 100%">Date</td>
             <td><input type="date" size="80" name="journey_date_f" value="<?php echo date("Y-m-d",$journey_date); ?>" /></td>
         </tr>
         <tr>
-            <td style="width: 100%">Time</td>
+            <td style="width: 100%">Time (plain old string)</td>
             <td><input type="text" size="80" name="journey_time_f" value="<?php echo $journey_time; ?>" /></td>
         </tr>
         <tr>
@@ -130,20 +144,23 @@ function display_journey_event_meta_box( $journey_event ) {
         </tr>
         <tr>
             <td style="width: 100%">Number of Players&mdash;just to keep track of such things!</td>
-            <td><input type="text" size="80" name="journey_num_players_f" value="<?php echo $journey_num_players; ?>" /></td>
+            <td><input type="number" size="80" name="journey_num_players_f" value="<?php echo $journey_num_players; ?>" /></td>
         </tr>
     </table>
     <?php
 }
 
 function add_journey_event_fields( $journey_event_id, $journey_event ) {
-    // Check post type for movie reviews
+    // Check post type for journey
     if ( $journey_event->post_type == 'journeys' ) {
 	
 				if ( !wp_verify_nonce( $_POST['journey_fields_nonce'], plugin_basename( __FILE__ ) ) )
 				return;
 				
         // Store data in post meta table if present in post data
+	if (isset($_POST['journey_subtitle_f']) && $_POST['journey_subtitle_f'] != ''){
+		update_post_meta($journey_event_id, 'journey_subtitle', strip_tags($_POST['journey_subtitle_f'],"<a>"));
+	}
         if ( isset( $_POST['journey_date_f'] ) && $_POST['journey_date_f'] != '' ) {
 						$date = strtotime($_POST['journey_date_f']);
             update_post_meta( $journey_event_id, 'journey_date', date('Y-m-d',$date) );
@@ -186,3 +203,4 @@ function include_template_function( $template_path ) {
     }
     return $template_path;
 }
+
