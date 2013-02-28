@@ -11,6 +11,9 @@ License: GPLv2
 
 add_action( 'init', 'create_journey_event_type' );
 add_action( 'init', 'journey_taxonomies', 0 );
+add_action( 'save_post', 'add_journey_event_fields', 10, 2 );
+add_action( 'admin_init', 'journey_event_admin' );
+add_filter( 'template_include', 'include_template_function', 1 );
 
 function journey_taxonomies() {
 	$args = array();
@@ -31,11 +34,11 @@ function journey_taxonomies() {
 			'labels' => $labels,
 			'hierarchical' => false,
 		);
-	register_taxonomy( 'journey_city', 'journey_events', $args );
+	register_taxonomy( 'journey_city', 'journeys', $args );
 }
 
 function create_journey_event_type() {
-    register_post_type( 'journey_events',
+    register_post_type( 'journeys',
         array(
             'labels' => array(
                 'name' => 'Journey Events',
@@ -63,41 +66,43 @@ function create_journey_event_type() {
     );
 }
 
-add_action( 'save_post', 'add_journey_event_fields', 10, 2 );
-
-
-add_action( 'admin_init', 'journey_event_admin' );
 function journey_event_admin() {
     add_meta_box( 'journey_event_meta_box',
         'Journey Event Details',
         'display_journey_event_meta_box',
-        'mjourney_events', 'normal', 'high'
+        'journeys', 'normal', 'high'
     );
 }
 
 function display_journey_event_meta_box( $journey_event ) {
 	
-		$journey_date = strtotime( get_post_meta( $journey_event->ID, 'journey_date', true ) );
+		global $post;
+
+		$custom = get_post_custom($post->ID);
 		
-		$journey_time = esc_html(get_post_meta( $journey_event->ID, 'journey_time', true ) );
+		wp_nonce_field( plugin_basename( __FILE__ ), 'journey_fields_nonce' );
 		
-		$journey_location_str = esc_html( get_post_meta( $journey_event->ID, 'journey_location_str', true ) );
+		$journey_date = strtotime( get_post_meta( $post->ID, 'journey_date', true ) );
 		
-		$journey_location_url = esc_html( get_post_meta( $journey_event->ID, 'journey_location_url', true ) );
+		$journey_time = esc_html(get_post_meta( $post->ID, 'journey_time', true ) );
 		
-		$journey_event_details_url = esc_html( get_post_meta( $journey_event->ID, 'journey_details_url', true ) );
+		$journey_location_str = esc_html( get_post_meta( $post->ID, 'journey_location_str', true ) );
 		
-		$journey_facebook_url = esc_html( get_post_meta( $journey_event->ID, 'journey_facebook_url', true ) );
+		$journey_location_url = esc_html( get_post_meta( $post->ID, 'journey_location_url', true ) );
 		
-		$journey_sfzero_url = esc_html( get_post_meta( $journey_event->ID, 'journey_sfzero_url', true ) );
+		$journey_event_details_url = esc_html( get_post_meta( $post->ID, 'journey_details_url', true ) );
+		
+		$journey_facebook_url = esc_html( get_post_meta( $post->ID, 'journey_facebook_url', true ) );
+		
+		$journey_sfzero_url = esc_html( get_post_meta( $post->ID, 'journey_sfzero_url', true ) );
 								
-    $journey_num_players = intval( get_post_meta( $journey_event->ID, 'journey_num_players', true ) );
+    $journey_num_players = intval( get_post_meta( $post->ID, 'journey_num_players', true ) );
 
     ?>
     <table>
         <tr>
             <td style="width: 100%">Date</td>
-            <td><input type="date" size="80" name="journey_date_f" value="<?php echo $journey_date; ?>" /></td>
+            <td><input type="date" size="80" name="journey_date_f" value="<?php echo date("Y-m-d",$journey_date); ?>" /></td>
         </tr>
         <tr>
             <td style="width: 100%">Time</td>
@@ -133,11 +138,15 @@ function display_journey_event_meta_box( $journey_event ) {
 
 function add_journey_event_fields( $journey_event_id, $journey_event ) {
     // Check post type for movie reviews
-    if ( $journey_event->post_type == 'journey_events' ) {
+    if ( $journey_event->post_type == 'journeys' ) {
+	
+				if ( !wp_verify_nonce( $_POST['journey_fields_nonce'], plugin_basename( __FILE__ ) ) )
+				return;
+				
         // Store data in post meta table if present in post data
         if ( isset( $_POST['journey_date_f'] ) && $_POST['journey_date_f'] != '' ) {
 						$date = strtotime($_POST['journey_date_f']);
-            update_post_meta( $journey_event_id, 'journey_date', $date );
+            update_post_meta( $journey_event_id, 'journey_date', date('Y-m-d',$date) );
         }
         if ( isset( $_POST['journey_time_f'] ) && $_POST['journey_time_f'] != '' ) {
             update_post_meta( $journey_event_id, 'journey_time', $_POST['journey_time_f'] );
@@ -161,4 +170,19 @@ function add_journey_event_fields( $journey_event_id, $journey_event ) {
             update_post_meta( $journey_event_id, 'journey_num_players', intval($_POST['journey_num_players_f']) );
         }
     }
+}
+
+function include_template_function( $template_path ) {
+    if ( get_post_type() == 'journeys' ) {
+        if ( is_single() ) {
+            // checks if the file exists in the theme first,
+            // otherwise serve the file from the plugin
+            if ( $theme_file = locate_template( array ( 'single-journey.php' ) ) ) {
+                $template_path = $theme_file;
+            } else {
+                $template_path = plugin_dir_path( __FILE__ ) . '/single-journey.php';
+            }
+        }
+    }
+    return $template_path;
 }
